@@ -1,0 +1,1 @@
+My plan for this project is to make a webpage using spotifys API to view Drakes music info
