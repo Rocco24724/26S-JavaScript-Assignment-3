@@ -4,85 +4,87 @@ const studentName = "Rocco Minetola";
  
 document.addEventListener("DOMContentLoaded", () => {
   const studentInfoEl = document.getElementById("student-info");
-  studentInfoEl.textContent = `Student ID: ${studentId} / Name: ${studentName}`;
+  if (studentInfoEl) {
+    studentInfoEl.textContent = `Student ID: ${studentId} / Name: ${studentName}`;
+  }
 });
 
-/* Spotify Info */
-/* For now i'm leaving these blank because I do not want to upload them to Github but will add them later on when I upload to a web server */
-const CLIENT_ID = "Temp";
-const CLIENT_SECRET = "Temp-Secret"
-const DRAKE_ARTIST_ID = "3TVXtAsR1Inumwj472S9r4";
+/* iTunes Search API with JSONP helper */
+function fetchJSONP(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = "itunes_cb_" + Math.random().toString(36).substr(2, 9);
+    const script = document.createElement("script");
 
-/* Getting Access Token */
-async function getAccessToken() {
-    const response = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": "Basic " + btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)
-        },
-        body: "grant_type=client_credentials"
-    });
+    const delimiter = url.includes("?") ? "&" : "?";
+    script.src = `${url}${delimiter}callback=${callbackName}`;
 
-    if (!response.ok) {
-        throw new Error(`Token request failed: ${response.status}`);
-    }
+    window[callbackName] = (data) => {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
 
-    const data = await response.json();
-    return data.access_token;
+    script.onerror = () => {
+      delete window[callbackName];
+      if (script.parentNode) document.body.removeChild(script);
+      reject(new Error("JSONP Request Failed"));
+    };
+
+    document.body.appendChild(script);
+  });
 }
 
+const ARTIST_NAME = "Drake";
+const ITUNES_BASE_URL = "https://itunes.apple.com";
+
 /* Fetching Artist Data */
-async function getArtist(token) {
-    const response = await fetch(`https://api.spotify.com/v1/artists/${DRAKE_ARTIST_ID}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error(`Artist request failed: ${response.status}`);
-    return response.json();
+async function getArtist() {
+  const data = await fetchJSONP(`${ITUNES_BASE_URL}/search?term=${encodeURIComponent(ARTIST_NAME)}&entity=musicArtist&limit=1`);
+  if (!data.results || data.results.length === 0) throw new Error("Artist not found");
+  return data.results[0];
 }
 
 /* Fetching Top Tracks */
-async function getTopTracks(token) {
-  const response = await fetch(
-    `https://api.spotify.com/v1/artists/${DRAKE_ARTIST_ID}/top-tracks?market=US`,
-    { headers: { "Authorization": `Bearer ${token}` } }
-  );
-  if (!response.ok) throw new Error(`Top tracks request failed: ${response.status}`);
-  const data = await response.json();
-  return data.tracks;
+async function getTopTracks(artistId) {
+  const data = await fetchJSONP(`${ITUNES_BASE_URL}/lookup?id=${artistId}&entity=song&limit=11`);
+  return (data.results || []).filter(item => item.wrapperType === "track");
 }
 
 /* Fetch Albums */
-async function getAlbums(token) {
-  const response = await fetch(
-    `https://api.spotify.com/v1/artists/${DRAKE_ARTIST_ID}/albums?include_groups=album&market=US&limit=12`,
-    { headers: { "Authorization": `Bearer ${token}` } }
-  );
-  if (!response.ok) throw new Error(`Albums request failed: ${response.status}`);
-  const data = await response.json();
-  return data.items;
+async function getAlbums(artistId) {
+  const data = await fetchJSONP(`${ITUNES_BASE_URL}/lookup?id=${artistId}&entity=album&limit=13`);
+  return (data.results || []).filter(item => item.wrapperType === "collection");
+}
+
+/* Helper to up the res of images */
+function getHighResImage(url) {
+  if (!url) return "";
+  return url.replace("100x100bb.jpg", "600x600bb.jpg");
 }
 
 /* Render Functions */
 function renderArtist(artist) {
   const section = document.getElementById("artist-section");
-  const image = artist.images?.[0]?.url ?? "";
-  const followers = artist.followers?.total?.toLocaleString() ?? "N/A";
-  const genres = artist.genres?.length ? artist.genres : ["N/A"];
- 
+  if (!section) return;
+
+  const genre = artist.primaryGenreName || "Hip-Hop/Rap";
+  const artistUrl = artist.artistLinkUrl || "#";
+
   section.innerHTML = `
-    <img src="${image}" alt="${artist.name}" />
+    <img src="https://upload.wikimedia.org/wikipedia/commons/2/28/Drake_July_2016.jpg" alt="${artist.artistName}" />
     <div class="artist-info">
-      <h2>${artist.name}</h2>
+      2>${artist.artistName}</h2>
       <div class="artist-stats">
-        <span class="stat-pill">${followers} followers</span>
-        <span class="stat-pill">Popularity: ${artist.popularity}/100</span>
+        <span class="stat-pill">Apple Music Verified</span>
+        <span class="stat-pill">Genre: ${genre}</span>
       </div>
       <div class="genre-tags">
-        ${genres.map(g => `<span class="genre-tag">${g}</span>`).join("")}
+        <span class="genre-tag">${genre}</span>
+        <span class="genre-tag">Rap</span>
+        <span class="genre-tag">Pop</span>
       </div>
-      <a class="spotify-link-btn" href="${artist.external_urls.spotify}" target="_blank" rel="noopener noreferrer">
-        Open on Spotify
+      <a class="spotify-link-btn" href="${artistUrl}" target="_blank" rel="noopener noreferrer">
+        Open on Apple Music
       </a>
     </div>
   `;
@@ -90,25 +92,28 @@ function renderArtist(artist) {
  
 function renderTopTracks(tracks) {
   const container = document.getElementById("top-tracks-container");
- 
+  if (!container) return;
+
   container.innerHTML = tracks
     .slice(0, 10)
     .map((track, index) => {
-      const albumArt = track.album?.images?.[2]?.url ?? track.album?.images?.[0]?.url ?? "";
-      const minutes = Math.floor(track.duration_ms / 60000);
-      const seconds = String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, "0");
- 
-      const audioPlayer = track.preview_url
-        ? `<audio class="preview-audio" controls src="${track.preview_url}"></audio>`
+      const albumArt = getHighResImage(track.artworkUrl100);
+      
+      const durationMs = track.trackTimeMillis || 180000;
+      const minutes = Math.floor(durationMs / 60000);
+      const seconds = String(Math.floor((durationMs % 60000) / 1000)).padStart(2, "0");
+
+      const audioPlayer = track.previewUrl
+        ? `<audio class="preview-audio" controls src="${track.previewUrl}"></audio>`
         : `<span class="track-duration">${minutes}:${seconds}</span>`;
- 
+
       return `
         <div class="track-row">
           <span class="track-rank">${index + 1}</span>
-          <img src="${albumArt}" alt="${track.album.name}" />
+          <img src="${albumArt}" alt="${track.collectionName || 'Album'}" />
           <div class="track-meta">
-            <div class="track-name">${track.name}</div>
-            <div class="track-album">${track.album.name}</div>
+            <div class="track-name">${track.trackName}</div>
+            <div class="track-album">${track.collectionName || ''}</div>
           </div>
           ${audioPlayer}
         </div>
@@ -119,16 +124,20 @@ function renderTopTracks(tracks) {
  
 function renderAlbums(albums) {
   const container = document.getElementById("albums-container");
- 
+  if (!container) return;
+
   container.innerHTML = albums
+    .slice(0, 12)
     .map(album => {
-      const cover = album.images?.[0]?.url ?? "";
-      const year = album.release_date?.split("-")[0] ?? "";
+      const cover = getHighResImage(album.artworkUrl100);
+      const year = album.releaseDate ? album.releaseDate.split("-")[0] : "";
+      const albumUrl = album.collectionViewUrl || "#";
+
       return `
-        <a class="album-card" href="${album.external_urls.spotify}" target="_blank" rel="noopener noreferrer">
-          <img src="${cover}" alt="${album.name}" />
+        <a class="album-card" href="${albumUrl}" target="_blank" rel="noopener noreferrer">
+          <img src="${cover}" alt="${album.collectionName}" />
           <div class="album-card-info">
-            <div class="album-name">${album.name}</div>
+            <div class="album-name">${album.collectionName}</div>
             <div class="album-year">${year}</div>
           </div>
         </a>
@@ -138,20 +147,18 @@ function renderAlbums(albums) {
 }
  
 function renderError(sectionId, message) {
-  document.getElementById(sectionId).innerHTML =
-    `<p class="error-msg">⚠️ ${message}</p>`;
+  const el = document.getElementById(sectionId);
+  if (el) el.innerHTML = `<p class="error-msg">⚠️ ${message}</p>`;
 }
  
 /* Main */
 async function init() {
   try {
-    const token = await getAccessToken();
- 
-    // Run all three data calls in parallel for speed
-    const [artist, tracks, albums] = await Promise.all([
-      getArtist(token),
-      getTopTracks(token),
-      getAlbums(token)
+    const artist = await getArtist();
+    
+    const [tracks, albums] = await Promise.all([
+      getTopTracks(artist.artistId),
+      getAlbums(artist.artistId)
     ]);
  
     renderArtist(artist);
@@ -159,12 +166,11 @@ async function init() {
     renderAlbums(albums);
  
   } catch (err) {
-    console.error(err);
-    renderError("artist-section", "Couldn't load artist data. Check your Client ID/Secret in js/script.js.");
+    console.error("Init Error:", err);
+    renderError("artist-section", "Couldn't load artist data.");
     renderError("top-tracks-container", "Couldn't load top tracks.");
     renderError("albums-container", "Couldn't load albums.");
   }
 }
- 
-document.addEventListener("DOMContentLoaded", init);
 
+document.addEventListener("DOMContentLoaded", init);

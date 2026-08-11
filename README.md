@@ -1,1 +1,1 @@
-My plan for this project is to make a webpage using spotifys API to view Drakes music info
+Due to Changes of the Spotify API that happened a few months back I am unable to use some of the things I wanted to in my webpage so I needed to switch to using the Itunes API instead of the spotify API

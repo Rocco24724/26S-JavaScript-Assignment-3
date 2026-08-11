@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width", initial-scale="1.0" />
-    <title>Drake Catalog Explorer - Spotify Web API Demo </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drake Catalog Explorer - iTunes API Demo</title>
 
     <!-- Linking Style Sheet -->
     <link rel="stylesheet" href="css/style.css" />
@@ -15,32 +15,31 @@
 
     <!-- Header -->
     <header class="site-header">
-        <h1> Drake Catalog Explorer</h1>
-        <p class="subtitle">A live demo of the Spotify Web API - Assignment 3: Third Party APIs</p>
+        <h1>Drake Catalog Explorer</h1>
+        <p class="subtitle">A live demo of the iTunes Search API - Assignment 3: Third Party APIs</p>
     </header>
 
     <!-- Main -->
     <main>
 
-        <!-- With all the sections in my main I have a loading message that shows up before the js pulls from the API for the info I need-->
         <!-- Artist profile card (filled in with js) -->
-        <section id ="artist-section" class="artist-card">
-            <p class="loading-msg">Loading artist data from Spotify</p>
+        <section id="artist-section" class="artist-card">
+            <p class="loading-msg">Loading artist data from iTunes...</p>
         </section>
 
         <!-- Top Tracks (filled in with js) -->
         <section class="content-section">
             <h2>Top Tracks</h2>
             <div id="top-tracks-container" class="tracks-grid">
-                <p class="loading-msg">Loading top tracks</p>
+                <p class="loading-msg">Loading top tracks...</p>
             </div>
         </section>
 
         <!-- Album section (filled in with js) -->
         <section class="content-section">
-            <h2>Albums & Discography </h2>
+            <h2>Albums & Discography</h2>
             <div id="albums-container" class="albums-grid">
-                <p class="loading-msg">Loading albums</p> 
+                <p class="loading-msg">Loading albums...</p> 
             </div>
         </section>
 
@@ -50,17 +49,14 @@
     <footer class="site-footer">
         <p>
             Built using the
-            <a href="https://developer.spotify.com/documentation/web-api" target="_blank" rel="noopener noreferrer">
-                Spotify Web API
+            <a href="https://performance-partners.apple.com/search-api" target="_blank" rel="noopener noreferrer">
+                iTunes Search API
             </a>.
         </p>
 
-        <!-- Adding my info in -->
+        <!-- Adding student info -->
         <p id="student-info"></p>
     </footer>
 
 </body>
 </html>
-
-
-
